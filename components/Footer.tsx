@@ -25,7 +25,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="transition-colors hover:text-[var(--color-accent)]"
           >
-            GitHub
+            --
           </a>
           <a
             href="https://twitter.com"
@@ -33,13 +33,13 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="transition-colors hover:text-[var(--color-accent)]"
           >
-            Twitter
+            ---
           </a>
           <a
             href="mailto:hola@mi-blog.com"
             className="transition-colors hover:text-[var(--color-accent)]"
           >
-            Contacto
+          --
           </a>
         </div>
       </div>

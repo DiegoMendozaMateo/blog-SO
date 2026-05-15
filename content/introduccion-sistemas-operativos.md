@@ -505,6 +505,85 @@ pthread_mutex_lock(&mutex);    // Entra a sección crítica
 pthread_mutex_unlock(&mutex);  // Sale de sección crítica
 ```
 
+#### codigo de practica de semaforo
+En esta sección presentare un codigo usando semaforos. En este caso es un codigo simple que hace que el proceso padre le encie una señal al proceso hijo y este resppnda.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+#include <sys/wait.h>
+
+/* Estructura necesaria para semctl */
+union semun {
+    int val;
+};
+
+int main(int argc, char *argv[]) {
+
+    key_t llave;
+    int semid;
+    pid_t pid;
+    struct sembuf op;
+    union semun arg;
+
+    /* Generar clave IPC */
+    llave = ftok(argv[0], 65);
+
+    /* Crear semáforo */
+    semid = semget(llave, 1, 0666 | IPC_CREAT);
+	/*066 ->lectura y escritura */
+    /* Inicializar semáforo en 0 */
+    arg.val = 0;
+    semctl(semid, 0, SETVAL, arg);
+
+    pid = fork();
+
+    if(pid == 0) {
+
+        /* PROCESO HIJO */
+
+        printf("Hijo: esperando señal del padre...\n");
+
+        op.sem_num = 0;
+        op.sem_op = -1;  // operación P (wait)
+        op.sem_flg = 0;
+
+        semop(semid, &op, 1);
+
+        printf("Hijo: señal recibida, continuando ejecución.\n");
+
+    } else {
+
+        /* PROCESO PADRE */
+
+        sleep(2);
+        printf("Padre: enviando señal al hijo...\n");
+
+        op.sem_num = 0;
+        op.sem_op = 1;   // operación V (signal)
+        op.sem_flg = 0;
+
+        semop(semid, &op, 1);
+
+        wait(NULL);
+
+        /* Eliminar semáforo */
+        semctl(semid, 0, IPC_RMID);
+
+        printf("Padre: proceso terminado.\n");
+    }
+
+    return EXIT_SUCCESS;
+}
+
+```
+resultado del programa:
+![Resultado del comando uname -a](/post/introduccionSO/cap-ocho.jpg)
+
 ### 3.3 Memoria compartida
 
 Es la forma más rápida de comunicación entre procesos. Dos o más procesos comparten una zona de memoria directamente.
@@ -527,24 +606,189 @@ msgsnd(qid, &mensaje, tamaño, 0);         // Enviar
 msgrcv(qid, &mensaje, tamaño, tipo, 0);   // Recibir
 ```
 
-### 3.5 Ver objetos IPC con comandos
+#### codigo de practica de cola de mensajes
+En esat sección presentare un codigo que simula el comando who de linux usando la cola de mensajes. Este codigo fue dado en clase para ejemplificar el uso de la lllamda.
 
-```bash
-ipcs          # Lista todos los objetos IPC activos
-ipcs -m       # Solo memoria compartida
-ipcs -s       # Solo semáforos
-ipcs -q       # Solo colas de mensajes
+```c
+
+// ejercicio2 - cola de mensajes con who (utmp + ctime)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+#include <utmp.h>          // struct utmp, setutent, getutent
+#include <sys/types.h>
+#include <sys/ipc.h>       // ftok, IPC_CREAT
+#include <sys/msg.h>       // msgget, msgsnd, msgrcv, msgctl
+#include <sys/wait.h>
+
+// ── Estructura del mensaje ──────────────────────────────────────────────
+// La cola de mensajes de System V requiere que el primer campo sea
+// siempre un long llamado mtype (es obligatorio por la API).
+// El resto es el contenido que queremos mandar.
+#define TIPO_USUARIO  1L   // mensaje con datos de un usuario
+#define TIPO_FIN      2L   // señal de que ya no hay mas datos
+
+typedef struct {
+    long mtype;            // tipo del mensaje (obligatorio, debe ser > 0)
+    char usuario[32];      // nombre de usuario
+    char terminal[32];     // tty o pts donde esta conectado
+    char hora[64];         // tiempo de login formateado con ctime()
+} Mensaje;
+
+// ── EMISOR: lee utmp y manda un mensaje por cada usuario activo ─────────
+void emisor(int mqid) {
+    struct utmp *entrada;
+    Mensaje msg;
+    int enviados = 0;
+
+    // setutent() rebobina el archivo /var/run/utmp al inicio
+    setutent();
+
+    // getutent() lee una entrada a la vez, retorna NULL al terminar
+    while ((entrada = getutent()) != NULL) {
+
+        // ut_type == USER_PROCESS significa que es una sesion de usuario real
+        // (filtra entradas de boot, runlevel, etc.)
+        if (entrada->ut_type != USER_PROCESS)
+            continue;
+
+        msg.mtype = TIPO_USUARIO;
+
+        // Copiar usuario y terminal con strncpy para evitar overflow
+        strncpy(msg.usuario,  entrada->ut_user, sizeof(msg.usuario)  - 1);
+        strncpy(msg.terminal, entrada->ut_line, sizeof(msg.terminal) - 1);
+        msg.usuario[sizeof(msg.usuario)   - 1] = '\0';
+        msg.terminal[sizeof(msg.terminal) - 1] = '\0';
+
+        // ut_tv.tv_sec es el timestamp del login — ctime() lo convierte
+        // a string "Www Mmm dd hh:mm:ss yyyy\n", quitamos el \n final
+        time_t t = (time_t)entrada->ut_tv.tv_sec;
+        char *ct = ctime(&t);
+        strncpy(msg.hora, ct, sizeof(msg.hora) - 1);
+        msg.hora[sizeof(msg.hora) - 1] = '\0';
+        // quitar el salto de linea que pone ctime
+        msg.hora[strcspn(msg.hora, "\n")] = '\0';
+
+        // msgsnd(id_cola, &mensaje, tamaño_del_contenido, flags)
+        // El tamaño NO incluye el campo mtype, solo el contenido
+        if (msgsnd(mqid, &msg, sizeof(Mensaje) - sizeof(long), 0) == -1) {
+            perror("msgsnd usuario");
+            exit(EXIT_FAILURE);
+        }
+        enviados++;
+        printf("[Emisor]  enviado: %-12s  %-12s  %s\n",
+               msg.usuario, msg.terminal, msg.hora);
+    }
+
+    endutent(); // cerrar /var/run/utmp
+
+    // Mandar mensaje de fin para que el receptor sepa que ya no hay mas
+    memset(&msg, 0, sizeof(Mensaje));
+    msg.mtype = TIPO_FIN;
+    if (msgsnd(mqid, &msg, sizeof(Mensaje) - sizeof(long), 0) == -1) {
+        perror("msgsnd fin");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("[Emisor]  total enviados: %d  (+1 mensaje de fin)\n\n", enviados);
+    exit(EXIT_SUCCESS);
+}
+
+// ── RECEPTOR: recibe mensajes e imprime como who ────────────────────────
+void receptor(int mqid) {
+    Mensaje msg;
+    int recibidos = 0;
+
+    printf("\n%-12s  %-12s  %s\n", "USUARIO", "TERMINAL", "HORA LOGIN");
+    printf("%-12s  %-12s  %s\n",
+           "------------", "------------",
+           "-------------------------------");
+
+    // Recibir mensajes de TIPO_USUARIO hasta encontrar TIPO_FIN
+    while (1) {
+        // msgrcv(id_cola, &buffer, tamaño_contenido, tipo, flags)
+        // tipo=0 recibe cualquier mensaje; tipo=N recibe solo ese tipo
+        // Aqui recibimos cualquiera para manejar ambos tipos
+        if (msgrcv(mqid, &msg, sizeof(Mensaje) - sizeof(long), 0, 0) == -1) {
+            perror("msgrcv");
+            exit(EXIT_FAILURE);
+        }
+
+        if (msg.mtype == TIPO_FIN)
+            break;
+
+        printf("%-12s  %-12s  %s\n", msg.usuario, msg.terminal, msg.hora);
+        recibidos++;
+    }
+
+    printf("\nTotal de usuarios conectados: %d\n\n", recibidos);
+
+    // msgctl(id, IPC_RMID, NULL) elimina la cola del kernel
+    // Si no se hace, la cola persiste aunque el programa termine
+    // (se puede ver con: ipcs -q)
+    if (msgctl(mqid, IPC_RMID, NULL) == -1)
+        perror("msgctl IPC_RMID");
+    else
+        printf("[Receptor] Cola de mensajes eliminada.\n");
+
+    exit(EXIT_SUCCESS);
+}
+
+// ── MAIN ────────────────────────────────────────────────────────────────
+int main(void) {
+    // ftok genera una clave IPC a partir de un archivo existente y un id
+    // Todos los procesos que usen el mismo archivo+id obtienen la misma clave
+    key_t clave = ftok("/tmp", 'W');
+    if (clave == -1) {
+        perror("ftok");
+        exit(EXIT_FAILURE);
+    }
+
+    // msgget crea la cola si no existe (IPC_CREAT) o la abre si ya existe
+    // 0666 son los permisos de acceso (lectura/escritura para todos)
+    int mqid = msgget(clave, IPC_CREAT | 0666);
+    if (mqid == -1) {
+        perror("msgget");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("=== Cola de mensajes (who) ===\n");
+    printf("ID de cola: %d  (verificar con: ipcs -q)\n\n", mqid);
+
+    switch (fork()) {
+
+    case -1:
+        perror("fork");
+        msgctl(mqid, IPC_RMID, NULL); // limpiar si falla el fork
+        exit(EXIT_FAILURE);
+
+    case 0:   // HIJO = Receptor
+        receptor(mqid);
+        break;
+
+    default:  // PADRE = Emisor
+        emisor(mqid);
+        wait(NULL);
+        break;
+    }
+
+    return EXIT_SUCCESS;
+}
+
 ```
+- la unica manera de mejorar en el uso de tuberias y semaforos, al menos desde mi punto de vista es poner muchos comentarios a tus codigos, especificar para que es y cual es su funcion, los datos que maneja,etc. para que cualquier error a la hora de manipularlos sea facil identificar donde podria encontrase el error.
 
-Los objetos IPC también están visibles en `/proc/sysvipc/`.
+resultado del programa:
+![Resultado del comando uname -a](/post/introduccionSO/cap-nueve.jpg)
 
-### Práctica 3 — Comunicación entre procesos
 
-> *Espacio para agregar capturas de pantalla y resultados de los programas ejecutados.*
+> Los temas presentados tambien fueron de un gran interes para mi, ya que estos llamados son importantes para manejar la informacion de manera mas optima y eficiente pero creo que estas tiene una dificultad bastante alta a la hora de trabajar con ellas ya que cualquier error puede ocasionar que no manejes bien la información del programa y termines con un codigo que no compila. Estos temas me enseñaron a ser cuidadoso a la hora de manejar cosas que parecen simples y no lo son. 
 
 ---
 
-## 5. Administración de Memoria
+## 4. Administración de Memoria
 
 ### Introducción
 
@@ -588,13 +832,67 @@ Permite que un programa use más memoria de la que físicamente existe. El SO ma
 
 La **MMU** (Unidad de Administración de Memoria) traduce las direcciones virtuales que usa el programa a direcciones físicas reales.
 
-### Práctica 5 — Administración de memoria
+#### codigo
+En esta sección presentare un fragmento de codigo, en especifíco una función que simula el comando free() de linux.
 
-> *Espacio para agregar capturas de pantalla y resultados de los comandos ejecutados.*
+```c
+void fre() {
+    struct sysinfo info;
+    if (sysinfo(&info) == -1) {
+        perror("sysinfo");
+        return;
+    }
+    
+    unsigned long unit = 1024;// Definimos la unidad de conversión (KB)
+    unsigned long m = info.mem_unit;// Multiplicador para convertir a bytes antes de convertir a KB
+
+    printf(" Estructura sysinfo \n");
+
+    //tiempos y carga de trabajo
+    printf("Uptime:             %ld segundos\n", info.uptime);
+    printf("Load Average:  %.2f%%\n", info.loads[0] / 65536.0);
+    printf("Load Average:  %.2f%%\n", info.loads[1] / 65536.0);
+    printf("Load Average: %.2f%%\n", info.loads[2] / 65536.0);
+    
+    printf("\n%-15s %12s %12s %12s\n", "Categoría", "Total ", "Usado ", "Libre ");
+    printf("\n");
+
+    // memoria
+    printf("%-15s %12lu %12lu %12lu\n", "Memoria RAM:",
+           (info.totalram * m) / unit,
+           ((info.totalram - info.freeram) * m) / unit,
+           (info.freeram * m) / unit);
+
+    //swap
+    printf("%-15s %12lu %12lu %12lu\n", "Swap:",
+           (info.totalswap * m) / unit,
+           ((info.totalswap - info.freeswap) * m) / unit,
+           (info.freeswap * m) / unit);
+
+    // otros detalles de memoria
+    printf("\nDetalles adicionales:\n");
+    printf("Memoria compartida: %12lu KB\n", (info.sharedram * m) / unit);
+    printf("Memoria en buffers: %12lu KB\n", (info.bufferram * m) / unit);
+    printf("Memoria High (Total): %12lu KB\n", (info.totalhigh * m) / unit);
+    printf("Memoria High (Libre): %12lu KB\n", (info.freehigh * m) / unit);
+    
+    // estadísticas de procesos y hardware
+    printf("\n%-20s %u\n", "Procesos actuales:", info.procs);
+    printf("%-20s %u bytes\n", "Tamaño de unidad:", info.mem_unit);
+    printf("\n");
+}
+```
+
+resultado del programa:
+![Resultado del comando uname -a](/post/introduccionSO/cap-diez.jpg)
+
+- - Este codigo podria mejorarse usando unsigned long long en tipo de datos para evitar el desbordamiento de datos.
+
+> Siendo sincero este tema no me gusto tanto, es un tema interesante pero muy complicado, despues de todo creo que a la mayoria de programadores les cuesta manejar memoria.
 
 ---
 
-## 6. Arquitectura del Sistema de Archivos
+## 5. Arquitectura del Sistema de Archivos
 
 ### Introducción
 
@@ -659,13 +957,9 @@ lsblk       # Lista de dispositivos de bloque
 fsck        # Verificar y reparar el sistema de archivos
 ```
 
-### Práctica 6 — Sistema de archivos
-
-> *Espacio para agregar capturas de pantalla y resultados de los programas ejecutados.*
-
 ---
 
-## 7. Señales
+## 6. Señales
 
 ### Introducción
 
@@ -724,15 +1018,3 @@ alarm(5); // En 5 segundos, el proceso recibirá SIGALRM
 
 Útil para implementar timeouts.
 
-### Práctica 7 — Señales
-
-> *Espacio para agregar capturas de pantalla y resultados de los programas ejecutados.*
-
----
-
-## Referencias
-
-- Gerónimo C., Gabriel. *Un vistazo a los Sistemas Operativos*. Universidad Tecnológica de la Mixteca, Versión 2.0, 2026.
-- Tanenbaum, A. S. *Sistemas Operativos Modernos*. Pearson, 3ª ed., 2008.
-- Stallings, W. *Operating Systems: Internals and Design Principles*. Pearson, 7ª ed., 2012.
-- Stevens, W. R. & Rago, S. A. *Advanced Programming in the UNIX Environment*. Addison-Wesley, 3ª ed., 2013.
