@@ -1,26 +1,201 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Lora", Georgia, serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-ink: #e7e2d9;
+  --color-ink-muted: #9b9589;
+  --color-accent: #c9a96e;
+  --color-accent-glow: rgba(201, 169, 110, 0.15);
+  --color-surface: #161412;
+  --color-surface-raised: #1e1b18;
+  --color-border: rgba(201, 169, 110, 0.18);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+::selection {
+  background-color: var(--color-accent);
+  color: #0d0c0b;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-surface); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
+
+/* ── Prose (contenido Markdown procesado) ── */
+
+.prose-blog {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  line-height: 1.85;
+  font-size: 1.0625rem;
+}
+
+.prose-blog h1,
+.prose-blog h2,
+.prose-blog h3,
+.prose-blog h4 {
+  font-family: var(--font-display);
+  color: #f0ebe2;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.prose-blog h2 {
+  font-size: 1.65rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.prose-blog h3 { font-size: 1.3rem; }
+.prose-blog p  { margin-bottom: 1.4rem; }
+
+.prose-blog a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 0.2s;
+}
+.prose-blog a:hover { opacity: 0.75; }
+
+.prose-blog blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 1.25rem;
+  margin-left: 0;
+  color: var(--color-ink-muted);
+  font-style: italic;
+}
+
+.prose-blog code {
+  font-family: var(--font-mono);
+  background: var(--color-surface-raised);
+  padding: 0.15em 0.45em;
+  border-radius: 4px;
+  font-size: 0.875em;
+  color: var(--color-accent);
+}
+
+.prose-blog pre {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+}
+
+.prose-blog pre code {
+  background: none;
+  padding: 0;
+  color: #d4c5a9;
+  font-size: 0.9rem;
+}
+
+.prose-blog ul,
+.prose-blog ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1.4rem;
+}
+
+.prose-blog li { margin-bottom: 0.4rem; }
+.prose-blog ul li::marker { color: var(--color-accent); }
+
+.prose-blog img {
+  border-radius: 8px;
+  width: 100%;
+  height: auto;
+  margin: 1.5rem 0;
+  border: 1px solid var(--color-border);
+}
+
+.prose-blog hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 2.5rem 0;
+}
+
+.prose-blog table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.prose-blog th,
+.prose-blog td {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.85rem;
+  text-align: left;
+}
+
+.prose-blog th {
+  background: var(--color-surface-raised);
+  color: var(--color-accent);
+  font-family: var(--font-display);
+}
+
+/* ── PostCard ── */
+
+.post-card {
+  border-color: var(--color-border);
+  background: var(--color-surface-raised);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.post-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-border), 0 8px 32px var(--color-accent-glow);
+}
+
+.post-card__num {
+  color: var(--color-border);
+}
+
+.post-card__tag {
+  color: var(--color-accent);
+  border-color: var(--color-border);
+}
+
+.post-card__title {
+  color: #f0ebe2;
+  transition: color 0.2s;
+}
+
+.post-card:hover .post-card__title {
+  color: var(--color-accent);
+}
+
+.post-card__excerpt {
+  color: var(--color-ink-muted);
+}
+
+.post-card__meta {
+  color: var(--color-ink-muted);
+}
+
+.post-card__arrow {
+  color: var(--color-accent);
 }
