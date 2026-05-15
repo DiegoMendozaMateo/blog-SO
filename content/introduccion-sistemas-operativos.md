@@ -1,14 +1,14 @@
 ---
-title: "Portafolio de Sistemas Operativos"
-date: "2025-05-15"
+title: "Introducción a los Sistemas Operativos"
+date: "2026-05-16"
 excerpt: "Resumen y reflexiones personales sobre los temas del curso de Sistemas Operativos: procesos, hilos, IPC, memoria y más."
-tags: ["sistemas-operativos", "linux", "portafolio"]
-author: "Tu Nombre"
+tags: ["sistemas-operativos", "linux"]
+author: "Diego Mendoza Mateo"
 ---
 
 ## Prólogo
 
-Estas notas forman parte de mi portafolio para el curso de Sistemas Operativos. El objetivo es registrar lo que aprendí en cada tema, explicarlo con mis propias palabras y reflexionar sobre su importancia. El material se basa en las notas *Un vistazo a los Sistemas Operativos* del M.C. Gabriel Gerónimo C. de la Universidad Tecnológica de la Mixteca.
+Este blog forma parte de un mini proyecto para el curso de Sistemas Operativos. El objetivo es registrar lo que aprendí en cada tema, explicarlo con mis propias palabras y reflexionar sobre su importancia. 
 
 ---
 
@@ -27,17 +27,16 @@ Los sistemas operativos pueden clasificarse según su uso:
 - **Paralelos**: aprovechan múltiples núcleos o procesadores al mismo tiempo.
 - **Móviles**: optimizados para recursos limitados (ej. Android, iOS).
 
-### Práctica 1 — Exploración del sistema
+### Exploración del sistema en linux
 
 > *Espacio para agregar capturas de pantalla y resultados de los comandos ejecutados.*
 
 ```bash
 # Ejemplo: ver la versión del kernel
-uname -r
-
-# Ver procesos activos
-ps aux
+uname -a
 ```
+
+![Resultado del comando uname -a](/post/introduccionSO/cap-dos.jpg)
 
 ---
 
@@ -111,6 +110,7 @@ Para esperar a un hijo específico, se usa `waitpid()`, que además permite opci
 
 Por convención, `status = 0` indica éxito y cualquier valor distinto de cero indica error.
 
+
 ### 2.7 Estado Zombi
 
 Un proceso zombi es aquel que ya terminó pero cuyo padre aún no ha llamado a `wait()`. El zombi no hace nada, pero ocupa una entrada en la tabla de procesos. Para evitarlos, el padre siempre debe llamar a `wait()` o `waitpid()` después de crear hijos.
@@ -119,6 +119,170 @@ Para observar zombis en el sistema:
 ```bash
 ps -el | grep Z
 ```
+
+#### codigos de practica de procesos hijos y padre
+En esta seccion presentare 2 codigos sencillos donde se uusaron algunas de las llamadas anteriores.
+- factorial de 2 numeros usando procesos padre e hijo:
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+
+int main(int argc, char *argv[]){
+	//variables(tuberias y numeros)
+	int tub1[2];//tuberia de padre a hijo
+	int tub2[2];//tuberia de hijo a padre
+	int num1,num2;
+	unsigned long long resp,resh;
+	
+	printf("factorial de 2 numeros(menores que 21 por que si no explota): ");
+	scanf("%d %d",&num1,&num2);
+	
+	//creacion de las tuberias y comprobacion
+	if (pipe(tub1) == -1 || pipe(tub2) == -1){
+		printf("Error en la creacion de alguna tuberia");
+		exit(-1);
+		}
+	
+	//creacion del hijo
+	pid_t hijo = fork();
+	
+	if (hijo == 0){
+		//cerrar y abrir tuberias
+		close(tub1[1]);//cerrar escritura [1]
+		close(tub2[0]);//cerrar lectura [0]
+		
+		int n;
+		unsigned long long r;
+		read(tub1[0], &n, sizeof(int));//leer numero que envia el padre
+		close(tub1[0]);
+		
+		//factorial
+		
+		r=1;
+		for(int i=1;i <= n;i++){
+			r *= i;
+			}
+		//mandar el resultado al padre
+		write(tub2[1], &r, sizeof(unsigned long long));
+		close(tub2[1]);
+		
+		exit(0);
+		}
+	else if(hijo == -1){
+		printf("Error al crear el hijo");
+		exit(-1);
+		}
+	
+	if (hijo > 0){
+		//cerrar y abrir tuberias
+		close(tub1[0]);//cerrar lectura [0]
+		close(tub2[1]);//cerrar escritura [1]
+		
+		write(tub1[1], &num2, sizeof(int));//mandar numero a hijo
+		close(tub1[1]);
+		
+		//factorial
+		resp = 1;
+		for(int j=1;j <= num1;j++){
+			resp *= j;
+			}
+		
+		//respuesta del hijo
+		read(tub2[0], &resh, sizeof(unsigned long long));
+		close(tub2[0]);	
+		
+		wait(NULL);//esperar a que el hijo termine
+		
+		//imprimir resultados
+		printf("Factorial de %d: %llu\n",num1,resp);
+		printf("Factorial de %d: %llu\n",num2,resh);
+		
+		}
+		
+	printf("Programa terminado");	
+	return EXIT_SUCCESS;
+	}
+```
+resultado del programa:
+![Resultado del comando uname -a](/post/introduccionSO/cap-tres.jpg)
+
+- - Este codigo se podria mejorar usando `perror()` para imprimir errores, ya que en este caso, imprimo un error con `printf()` que no es lo mas optimo.
+- - Otra mejora podria ser mejorar la estructura.
+
+- crear un arbol:
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+void CrearArbol(int nivelActual, int nivelMax){
+    // impresión de los valores
+    printf("PID del padre: %ld | PID del hijo: %ld | nivel: %d\n",
+           (long)getppid(), (long)getpid(), nivelActual);
+
+    // condición de salida
+    if (nivelActual >= nivelMax){
+        return;
+    }
+
+    // crear hijo izquierdo
+    pid_t hijoIzq = fork();
+    if (hijoIzq == 0){
+        CrearArbol(nivelActual + 1, nivelMax);
+        sleep(15);
+        exit(0);
+    } else if(hijoIzq == -1){
+        perror("Error en la creación del hijo izquierdo");
+        exit(EXIT_FAILURE);
+    }
+
+    // crear hijo derecho
+    pid_t hijoDer = fork();
+    if (hijoDer == 0){
+        CrearArbol(nivelActual + 1, nivelMax);
+        sleep(15);
+        exit(0);
+    } else if(hijoDer == -1){
+        perror("Error en la creación del hijo derecho");
+        exit(EXIT_FAILURE);
+    }
+
+    // esperar a los hijos
+    wait(NULL);
+    wait(NULL);
+
+    sleep(15);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Uso: %s <numero_niveles>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    int nivel = atoi(argv[1]);
+    if (nivel <= 0) {
+        fprintf(stderr, "El número de niveles debe ser mayor que 0\n");
+        return EXIT_FAILURE;
+    }
+
+    CrearArbol(0, nivel - 1);
+    printf("Programa terminado\n");
+    return EXIT_SUCCESS;
+}
+
+``` 
+
+resultado del programa:
+![Resultado del comando uname -a](/post/introduccionSO/cap-cuatro.jpg)
+
+- - Investigando como podria mejorar este codigo encontre que se podria mejorar usando `fflush(stdout)` antes de cada `fork()` ya que `printf()` guarda el texto en un buffer interno. Si el buffer no se ha vaciado cuando se hace el `fork()`, el proceso hijo heredara una copia del buffer con el texto aún allí, y ambos procesos terminarán imprimiendo lo mismo, duplicando líneas en la consola y dando un árbol falso.
+- - Usar un `sleep()` para que el padre espere antes de terminar, pero después de que los hijos hayan hecho su trabajo.
+- - Otra mejora podria ser mejorar la estructura.
 
 ### 2.8 Hilos
 
@@ -155,9 +319,60 @@ Para compilar programas con hilos:
 gcc programa.c -o programa -lpthread
 ```
 
-### Práctica 2 — Procesos e hilos
+#### codigos de practica de hilos
 
-> *Espacio para agregar capturas de pantalla y resultados de los programas ejecutados.*
+En esta sección presentare un codigo de hilos muy simple para ejemplificar el funcionamiento de la creación de hilos.
+
+- crea 2 hilos:
+este codigo crea 2 hilos e imprime cual se creo primero, despues imprime un valor personalizado.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+void *funcionmensaje(void *ptr);
+
+int main(void){
+	pthread_t hilo1, hilo2;
+	char *mensaje1= "hilo 1";
+	char *mensaje2= "hilo 2";
+	int uno,dos;
+	
+	uno= pthread_create(&hilo1, NULL, funcionmensaje, (void *)mensaje1);
+	dos= pthread_create(&hilo2, NULL, funcionmensaje, (void *)mensaje2);
+	
+	pthread_join(hilo1,NULL);
+	pthread_join(hilo2,NULL);
+	
+	printf("Hilo 1 retorna: %d\n",uno);
+	printf("Hilo 2 retorna: %d\n",dos);
+	
+	return EXIT_SUCCESS;
+}
+
+void *funcionmensaje(void *ptr){
+	char *mensaje;
+	
+	mensaje=(char *)ptr;
+	printf("%s\n",mensaje);
+	pthread_exit(0);
+	
+}
+
+```
+
+resultado del programa:
+![Resultado del comando uname -a](/post/introduccionSO/cap-cinco.jpg)
+
+![Resultado del comando uname -a](/post/introduccionSO/cap-seis.jpg)
+
+En este caso a veces puede variar la creación de los hilos, por eso en las imagenes anteriores a veces se crea primero el hilo 1 y otras veces el hilo 2.
+
+- Al ser un codigo muy pequeño de ejemplo para ver la funcionalidad de llamada, no creo que sea necesario buscar una manera de mejorarlo.
+
+> Lo visto en esta sección fue lo mas interesante para mi a lo largo del semestre, ya que aprendí a crear y manipular hilos, procesos padre e hijo, de manera que mi codigo hiciera dos cosas de manera simultanea o concurrente y creo que eso es muy interesante a la hora de aprovechar los recursos de a mejor manera como programador, aunque hay que tener cuidado a la hora de usar las llamadas.
+
 
 ---
 
@@ -178,6 +393,8 @@ pipe(fd);
 
 Después de un `fork()`, padre e hijo pueden usar la tubería para enviarse mensajes.
 
+- - un buen ejemplo de este tipo de tuberia simple se encuntra en el codigo de factorial padre e hijo que se encuentra en el tema anterior.
+
 ### 3.1.2 Tuberías con nombre — `mkfifo()`
 
 Las tuberías con nombre (FIFO) funcionan igual que las pipes, pero tienen un nombre en el sistema de archivos, lo que permite que **procesos no emparentados** se comuniquen.
@@ -187,6 +404,61 @@ mkfifo("mi_tuberia", 0666);
 ```
 
 Cualquier proceso puede abrir el FIFO con `open()` para leer o escribir.
+
+#### codigos de practica de tuberias con nombre
+
+En esta sección pondre un codigo de ejemplo de una tuberia con nombre que devuelve el ID del padre y del hijo.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+int main (void)
+{
+pid_t hijo;
+int file;
+char mensaje[20];
+unlink("namepipe"); // borra el archivo del sistema de archivos
+umask(~0666); // cambia la máscara de permisos por defecto
+if(mkfifo("namepipe",0666)==-1)
+{
+perror("error en mkfifo");
+exit(-1);
+}
+if ( (hijo=fork ( ))== 0)
+{
+fprintf (stdout,"soy el hijo, ID=%ld\n",(long)getpid());
+if( (file=open("namepipe",O_WRONLY) ) ==-1)
+{
+perror("error en mkfifo");
+exit(-1);
+}
+write (file,"soy el hijo,ID...\n",19);
+close(file);
+getchar();
+exit(0);
+}
+if (hijo > 0)
+{
+fprintf (stdout,"soy el padre, ID = %ld\n",(long)getpid());
+if((file=open("namepipe",O_RDONLY))==-1)
+{
+perror("error en open O_RDONLY");
+exit(-1);
+}
+read(file,mensaje,20);
+fprintf(stdout,"%s\n",mensaje );
+close(file);
+}
+return EXIT_SUCCESS;
+}
+
+```
+resultado del programa:
+![Resultado del comando uname -a](/post/introduccionSO/cap-siete.jpg)
 
 ### 3.2 Mecanismos IPC de System V
 

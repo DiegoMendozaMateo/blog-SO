@@ -21,7 +21,7 @@ export default function Navbar() {
           className="font-display text-xl font-bold transition-opacity hover:opacity-80"
           style={{ color: "#f0ebe2" }}
         >
-          mi<span style={{ color: "var(--color-accent)" }}>blog</span>
+          My<span style={{ color: "var(--color-accent)" }}>B</span>
         </Link>
 
         {/* Links */}

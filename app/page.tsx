@@ -40,8 +40,7 @@ export default function HomePage() {
           className="text-lg max-w-xl leading-relaxed"
           style={{ color: "var(--color-ink-muted)" }}
         >
-          Un espacio para compartir lo que aprendo sobre desarrollo web,
-          tecnología y el proceso creativo detrás del código.
+          Un blog para compartir lo que aprendo a lo largo de la carrera de ingeniería en computación.
         </p>
       </header>
 
