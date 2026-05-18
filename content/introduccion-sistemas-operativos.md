@@ -607,7 +607,7 @@ msgrcv(qid, &mensaje, tamaño, tipo, 0);   // Recibir
 ```
 
 #### codigo de practica de cola de mensajes
-En esat sección presentare un codigo que simula el comando who de linux usando la cola de mensajes. Este codigo fue dado en clase para ejemplificar el uso de la lllamda.
+En esta sección presentare un codigo que simula el comando who de linux usando la cola de mensajes. Este codigo fue dado en clase para ejemplificar el uso de la lllamda.
 
 ```c
 
