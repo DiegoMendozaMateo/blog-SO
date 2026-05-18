@@ -207,7 +207,7 @@ int main(int argc, char *argv[]){
 	}
 ```
 resultado del programa:
-![Resultado del comando uname -a](/post/introduccionSO/cap-tres.jpg)
+![Resultado ](/post/introduccionSO/cap-tres.jpg)
 
 - - Este codigo se podria mejorar usando `perror()` para imprimir errores, ya que en este caso, imprimo un error con `printf()` que no es lo mas optimo.
 - - Otra mejora podria ser mejorar la estructura.
@@ -278,7 +278,7 @@ int main(int argc, char *argv[]) {
 ``` 
 
 resultado del programa:
-![Resultado del comando uname -a](/post/introduccionSO/cap-cuatro.jpg)
+![Resultado ](/post/introduccionSO/cap-cuatro.jpg)
 
 - - Investigando como podria mejorar este codigo encontre que se podria mejorar usando `fflush(stdout)` antes de cada `fork()` ya que `printf()` guarda el texto en un buffer interno. Si el buffer no se ha vaciado cuando se hace el `fork()`, el proceso hijo heredara una copia del buffer con el texto aún allí, y ambos procesos terminarán imprimiendo lo mismo, duplicando líneas en la consola y dando un árbol falso.
 - - Usar un `sleep()` para que el padre espere antes de terminar, pero después de que los hijos hayan hecho su trabajo.
@@ -363,9 +363,9 @@ void *funcionmensaje(void *ptr){
 ```
 
 resultado del programa:
-![Resultado del comando uname -a](/post/introduccionSO/cap-cinco.jpg)
+![Resultado ](/post/introduccionSO/cap-cinco.jpg)
 
-![Resultado del comando uname -a](/post/introduccionSO/cap-seis.jpg)
+![Resultado ](/post/introduccionSO/cap-seis.jpg)
 
 En este caso a veces puede variar la creación de los hilos, por eso en las imagenes anteriores a veces se crea primero el hilo 1 y otras veces el hilo 2.
 
@@ -458,7 +458,7 @@ return EXIT_SUCCESS;
 
 ```
 resultado del programa:
-![Resultado del comando uname -a](/post/introduccionSO/cap-siete.jpg)
+![Resultado ](/post/introduccionSO/cap-siete.jpg)
 
 ### 3.2 Mecanismos IPC de System V
 
@@ -582,7 +582,7 @@ int main(int argc, char *argv[]) {
 
 ```
 resultado del programa:
-![Resultado del comando uname -a](/post/introduccionSO/cap-ocho.jpg)
+![Resultado ](/post/introduccionSO/cap-ocho.jpg)
 
 ### 3.3 Memoria compartida
 
@@ -781,7 +781,7 @@ int main(void) {
 - la unica manera de mejorar en el uso de tuberias y semaforos, al menos desde mi punto de vista es poner muchos comentarios a tus codigos, especificar para que es y cual es su funcion, los datos que maneja,etc. para que cualquier error a la hora de manipularlos sea facil identificar donde podria encontrase el error.
 
 resultado del programa:
-![Resultado del comando uname -a](/post/introduccionSO/cap-nueve.jpg)
+![Resultado ](/post/introduccionSO/cap-nueve.jpg)
 
 
 > Los temas presentados tambien fueron de un gran interes para mi, ya que estos llamados son importantes para manejar la informacion de manera mas optima y eficiente pero creo que estas tiene una dificultad bastante alta a la hora de trabajar con ellas ya que cualquier error puede ocasionar que no manejes bien la información del programa y termines con un codigo que no compila. Estos temas me enseñaron a ser cuidadoso a la hora de manejar cosas que parecen simples y no lo son. 
@@ -884,7 +884,7 @@ void fre() {
 ```
 
 resultado del programa:
-![Resultado del comando uname -a](/post/introduccionSO/cap-diez.jpg)
+![Resultado](/post/introduccionSO/cap-diez.jpg)
 
 - - Este codigo podria mejorarse usando unsigned long long en tipo de datos para evitar el desbordamiento de datos.
 
@@ -956,6 +956,596 @@ du -sh *    # Tamaño de carpetas en el directorio actual
 lsblk       # Lista de dispositivos de bloque
 fsck        # Verificar y reparar el sistema de archivos
 ```
+
+#### codigo de practica
+
+Para estos temas hicimos un miniproyecto llamado minishell,en el que buscabamos programar el comportamiento del shell nosotros mismos.
+
+minishell:
+```c
+#define _XOPEN_SOURCE 500
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <stdint.h>
+#include <sys/sysmacros.h>
+#include <sys/utsname.h>
+
+#include <time.h>
+#include <utmp.h>
+#include <sys/sysinfo.h>
+#include <sys/ioctl.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <linux/if.h>
+#include <linux/sockios.h>
+
+
+#define MAX_LEN 100
+
+
+void pwd();
+void cd(char *opcion);
+void mkdr(char *opcion);
+void ls(char *opcion);
+void cat(char *opcion);
+void unlnk(char *opcion);
+void rname(char *opcion);
+void find(char *opcion);
+void estat(char *opcion);
+void unme();
+void date();
+void who();
+void fre();
+void ip();
+void mac();
+void numerosdisp();
+
+int main(int argc, char *argv[]){
+    char opcion[MAX_LEN];
+
+    while (1) {
+        printf("\n> "); 
+        if (fgets(opcion, MAX_LEN, stdin) == NULL){ 
+			break;}
+
+        opcion[strcspn(opcion, "\n")] = 0;//strcspn busca el \n y lo cambia por 0
+
+        if (strcmp(opcion, "pwd") == 0) {
+            pwd();
+        } 
+        else if (strcmp(opcion, "exit") == 0 || strcmp(opcion, "EXIT") == 0) {
+            printf("Saliendo\n");
+            exit(0);
+        } 
+        else if (strncmp(opcion, "cd", 2) == 0) {
+            cd(opcion);
+            }
+        else if (strncmp(opcion, "mkdir", 5) == 0) {
+            mkdr(opcion);
+            }
+        else if (strncmp(opcion,"ls", 2) == 0){
+			ls(opcion);
+			}
+		else if (strncmp(opcion, "cat", 3) == 0){
+			cat(opcion);
+			}
+		else if (strncmp(opcion, "unlink", 6) == 0){
+			unlnk(opcion);
+			}
+		else if (strncmp(opcion, "rename", 6) == 0){
+			rname(opcion);
+			}
+		else if (strncmp(opcion, "find", 4) == 0){
+			find(opcion);
+			}
+		else if (strncmp(opcion, "stat", 4) == 0){
+			estat(opcion);
+			}
+		else if (strcmp(opcion, "uname") == 0){
+			unme();
+			}
+		else if (strcmp(opcion, "date") == 0){
+			date();
+			}
+		else if (strcmp(opcion, "who") == 0){
+			who();
+			}
+		else if (strcmp(opcion, "free") == 0){
+			fre();
+			}
+		else if (strcmp(opcion, "ip") == 0){
+			ip();
+			}
+		else if (strcmp(opcion, "mac") == 0){
+			mac();
+			}
+		else if (strcmp(opcion, "numerosdisp") == 0){
+			numerosdisp();
+			}
+    }
+    return 0;
+}
+
+void pwd(){
+    char directorio[1024]; // Buffer para almacenar la ruta
+    if (getcwd(directorio, sizeof(directorio)) != NULL) {//
+        printf("%s\n", directorio);
+    } else {
+        perror("Error en PWD");
+    }
+}
+
+void cd(char *opcion){
+	char *ruta; //un apuntador para la cadena que tiene la ruta
+	ruta = strchr(opcion,' ')+1;//strchr te pasa un puntero desde el caracter buscado hasta el final de la cadena
+	if(chdir(ruta)== -1){
+		perror("Error en la ruta");
+	}	
+}
+
+void mkdr(char *opcion){
+	char *ruta;//lo mismo que arriba
+	ruta = strchr(opcion,' ')+1;
+	if(mkdir(ruta, 0777) == -1){
+		perror("Error en algo ");
+		}
+}
+
+void ls(char *opcion){
+    int pl = 0, pa = 0, pi = 0; // banderas para las opciones l, a, i
+
+    char *param = strchr(opcion, ' '); // Busca si hay parametros despues del comando
+    if (param != NULL) {
+        param++;
+        if (strchr(param, 'l')) pl = 1; // Activa formato largo
+        if (strchr(param, 'a')) pa = 1; // Activa mostrar ocultos
+        if (strchr(param, 'i')) pi = 1; // Activa mostrar inodos
+    }
+
+    DIR *directorio;
+    char ruta[1024];
+    getcwd(ruta, sizeof(ruta)); // Obtiene directorio actual
+    
+    struct dirent *entradadir;
+    struct stat sb;
+    char rutacomp[1536];
+
+    if ( (directorio = opendir(ruta)) == NULL){
+        perror("Error\n");
+        return;
+    }
+
+    while ( (entradadir = readdir(directorio)) != NULL){
+        if (!pa && entradadir->d_name[0] == '.') continue; // Filtro de archivos ocultos
+
+        snprintf(rutacomp, sizeof(rutacomp), "%s/%s", ruta, entradadir->d_name); // Ruta completa
+        if (lstat(rutacomp, &sb) == -1) {
+            perror("lstat");
+            continue;
+        }
+
+        if (pi) { // Imprime numero de inodo si se pidio -i
+            printf("%ju\t", (uintmax_t)sb.st_ino);
+        }
+
+        if (pl) { // Formato largo (permisos, dueño, tamaño, fecha)
+
+            char tipo = '-'; // Determina el caracter de tipo de archivo
+            if      (S_ISDIR(sb.st_mode))  tipo = 'd';
+            else if (S_ISLNK(sb.st_mode))  tipo = 'l';
+            else if (S_ISCHR(sb.st_mode))  tipo = 'c';
+            else if (S_ISBLK(sb.st_mode))  tipo = 'b';
+            else if (S_ISFIFO(sb.st_mode)) tipo = 'p';
+            else if (S_ISSOCK(sb.st_mode)) tipo = 's';
+
+            // Impresion de mascara de permisos en formato rwxrwxrwx
+            printf("%c%c%c%c%c%c%c%c%c%c ",
+                tipo,
+                (sb.st_mode & S_IRUSR) ? 'r' : '-',
+                (sb.st_mode & S_IWUSR) ? 'w' : '-',
+                (sb.st_mode & S_IXUSR) ? 'x' : '-',
+                (sb.st_mode & S_IRGRP) ? 'r' : '-',
+                (sb.st_mode & S_IWGRP) ? 'w' : '-',
+                (sb.st_mode & S_IXGRP) ? 'x' : '-',
+                (sb.st_mode & S_IROTH) ? 'r' : '-',
+                (sb.st_mode & S_IWOTH) ? 'w' : '-',
+                (sb.st_mode & S_IXOTH) ? 'x' : '-'
+            );
+            char timebuf[64];
+            strftime(timebuf, sizeof(timebuf), "%b %d %H:%M", localtime(&sb.st_mtime));
+            printf("%ju %ju %ju %jd %s ",
+                (uintmax_t)sb.st_nlink,
+                (uintmax_t)sb.st_uid,
+                (uintmax_t)sb.st_gid,
+                (intmax_t)sb.st_size,
+                timebuf);
+        }
+
+        printf("%s \n", entradadir->d_name); // Nombre del archivo/carpeta
+    }
+    closedir(directorio); // Cierra el directorio
+}
+
+
+
+void cat(char *opcion){
+	char *ruta; //un apuntador para la cadena que tiene la ruta
+	ruta = strchr(opcion,' ')+1;//strchr te pasa un puntero desde el caracter buscado hasta el final de la cadena
+	
+	struct stat sb;
+	
+	if(lstat(ruta, &sb) == -1){
+		printf("Error");
+		}
+		
+	switch (sb.st_mode & S_IFMT) {
+         case S_IFBLK:  printf("block device\n");            break;
+         case S_IFCHR:  printf("character device\n");        break;
+         case S_IFDIR:  printf("directory\n");               break;
+         case S_IFIFO:  printf("FIFO/pipe\n");               break;
+         case S_IFLNK:  printf("symlink\n");                 break;
+         case S_IFREG:  printf("regular file\n");            break;
+         case S_IFSOCK: printf("socket\n");                  break;
+         default:       printf("unknown?\n");                break;
+         }
+         
+     if(S_IFMT==S_IFREG){
+		int doc;
+		doc=open(ruta,O_RDONLY);
+		if(doc==-1){
+			printf("error");
+		}
+		
+	}
+	
+	}
+
+void unlnk(char *opcion){
+	char *ruta; //un apuntador para la cadena que tiene la ruta
+	ruta = strchr(opcion,' ')+1;//strchr te pasa un puntero desde el caracter buscado hasta el final de la cadena
+	if(unlink(ruta)==-1){
+		perror("unlink");
+		}
+	}
+
+void rname(char *opcion){
+	char *rutacompleta; //un apuntador para la cadena que tiene la ruta
+	char rutavieja[512];
+	char *rutanueva;
+	int num;
+	rutacompleta = strchr(opcion,' ')+1;//strchr te pasa un puntero desde el caracter buscado hasta el final de la cadena
+	rutanueva = strchr(rutacompleta,' ')+1;//nombre nuevo
+	num = rutanueva - rutacompleta;
+	strncpy(rutavieja,rutacompleta,sizeof(char)*num);
+	rutavieja[num-1]='\0';
+	if(rename(rutavieja,rutanueva)==-1){
+		perror("rename");
+		}
+	}
+/*
+char dividir(char *texto){
+	
+	}
+*/
+
+void find(char *opcion){
+	char *rutacompleta; //un apuntador para la cadena que tiene la ruta
+	char ruta[512];
+	char *nombre;
+	int num;
+	
+	struct stat tipo;
+	char rutadirec[1024];
+	char rutarecursiva[1024];
+	char prov[512];
+	
+	
+	rutacompleta = strchr(opcion,' ')+1;//strchr te pasa un puntero desde el caracter buscado hasta el final de la cadena
+	nombre = strchr(rutacompleta,' ')+1;//nombre nuevo
+	num = nombre - rutacompleta; //calculo del tamaño de la ruta
+	strncpy(ruta,rutacompleta,sizeof(char)*num);//copia la ruta en ruta
+	ruta[num-1]='\0';
+	
+	DIR *directorio;
+	struct dirent *contenido;
+	
+	if((directorio = opendir(ruta)) == NULL){
+		fprintf (stderr, "No puedo abrir el directorio %s. Error %s\n", ruta, strerror(errno));
+	}
+	
+	while ( (contenido = readdir (directorio) ) != NULL){
+		if (strcmp(contenido->d_name, ".") == 0 || strcmp(contenido->d_name, "..") == 0) {
+            continue;
+        }//para ignorar /. y /.. para que no se cicle
+		
+		strcpy(rutadirec,ruta);//copia la ruta en rutadirect
+		strcat(rutadirec,"/");//añade un /
+		strcpy(prov,contenido ->d_name);//copia el nombre del archivo
+		strcat(rutadirec,prov);	//concatena el nombre del archivo con la ruta
+		
+		if(stat(rutadirec, &tipo)==-1){
+			printf("error");
+			}
+		
+		if((tipo.st_mode & S_IFMT)== S_IFDIR){
+			printf("directorio en cola\n");
+			strcpy(rutarecursiva," ");
+			strcat(rutarecursiva,rutadirec);
+			strcat(rutarecursiva," ");
+			strcat(rutarecursiva,nombre);
+			find(rutarecursiva);
+			}
+		
+		if(strcmp(contenido ->d_name,nombre)==0){
+			printf("archivo encontrado \n");
+			printf ("%s\n ", contenido ->d_name);
+			printf("En la ruta: \n");
+			pwd();
+			}
+	}
+		
+	
+	closedir(directorio);
+}
+
+void estat(char *opcion){
+	char *ruta; //un apuntador para la cadena que tiene la ruta
+	ruta = strchr(opcion,' ')+1;//strchr te pasa un puntero desde el caracter buscado hasta el final de la cadena
+	struct stat sb;
+	
+	if(stat(ruta, &sb)== -1){
+		perror("stat");
+		
+		}
+	
+    printf("ID of containing device:  [%x,%x]\n",
+		major(sb.st_dev),
+        minor(sb.st_dev));
+
+    printf("File type:                ");
+
+    switch (sb.st_mode & S_IFMT) {
+        case S_IFBLK:  printf("block device\n");            break;
+        case S_IFCHR:  printf("character device\n");        break;
+        case S_IFDIR:  printf("directory\n");               break;
+        case S_IFIFO:  printf("FIFO/pipe\n");               break;
+        case S_IFLNK:  printf("symlink\n");                 break;
+        case S_IFREG:  printf("regular file\n");            break;
+        case S_IFSOCK: printf("socket\n");                  break;
+        default:       printf("unknown?\n");                break;
+        }
+
+    printf("I-node number:            %ju\n", (uintmax_t) sb.st_ino);
+
+    printf("Mode:                     %jo (octal)\n",
+        (uintmax_t) sb.st_mode);
+
+    printf("Link count:               %ju\n", (uintmax_t) sb.st_nlink);
+    printf("Ownership:                UID=%ju   GID=%ju\n",
+        (uintmax_t) sb.st_uid, (uintmax_t) sb.st_gid);
+
+    printf("Preferred I/O block size: %jd bytes\n",
+        (intmax_t) sb.st_blksize);
+    printf("File size:                %jd bytes\n",
+        (intmax_t) sb.st_size);
+    printf("Blocks allocated:         %jd\n",
+        (intmax_t) sb.st_blocks);
+
+    printf("Last status change:       %s", ctime(&sb.st_ctime));
+    printf("Last file access:         %s", ctime(&sb.st_atime));
+    printf("Last file modification:   %s", ctime(&sb.st_mtime));
+	}
+
+void unme() {
+    struct utsname info;
+
+    if (uname(&info) == -1) {
+        perror("uname");
+        return;
+    }
+
+    printf("Nombre del sistema:  %s\n", info.sysname);
+    printf("Nombre del nodo:     %s\n", info.nodename);
+    printf("Release del kernel:  %s\n", info.release);
+    printf("Versión del kernel:  %s\n", info.version);
+    printf("Arquitectura: %s\n", info.machine);
+    
+}
+
+
+void date(){
+	time_t t = time(NULL);
+	if(t == (time_t)-1){ 
+		perror("time"); return; }
+	printf("%s", ctime(&t));
+}
+
+
+void who(){
+    struct utmp *entrada; // Estructura para registros de usuarios
+    setutent(); // Abre o reinicia la lectura del archivo utmp
+    while( (entrada = getutent()) != NULL ){ // Lee cada entrada del archivo
+        if(entrada->ut_type == USER_PROCESS){ // Filtra solo procesos de usuario reales
+            time_t t = (time_t)entrada->ut_tv.tv_sec; // Segundos del login
+            char timebuf[32]; // Buffer para la fecha formateada
+            strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M", localtime(&t));
+            printf("%-12s %-10s %s (%s)\n",entrada->ut_user,entrada->ut_line,timebuf,entrada->ut_host);
+        }
+    }
+    endutent(); // Cierra el archivo utmp
+}
+
+
+void fre() {
+    struct sysinfo info;
+    if (sysinfo(&info) == -1) {
+        perror("sysinfo");
+        return;
+    }
+    
+    unsigned long unit = 1024;// Definimos la unidad de conversión (KB)
+    unsigned long m = info.mem_unit;// Multiplicador para convertir a bytes antes de convertir a KB
+
+    printf(" Estructura sysinfo \n");
+
+    //tiempos y carga de trabajo
+    printf("Uptime:             %ld segundos\n", info.uptime);
+    printf("Load Average:  %.2f%%\n", info.loads[0] / 65536.0);
+    printf("Load Average:  %.2f%%\n", info.loads[1] / 65536.0);
+    printf("Load Average: %.2f%%\n", info.loads[2] / 65536.0);
+    
+    printf("\n%-15s %12s %12s %12s\n", "Categoría", "Total ", "Usado ", "Libre ");
+    printf("\n");
+
+    // memoria
+    printf("%-15s %12lu %12lu %12lu\n", "Memoria RAM:",
+           (info.totalram * m) / unit,
+           ((info.totalram - info.freeram) * m) / unit,
+           (info.freeram * m) / unit);
+
+    //swap
+    printf("%-15s %12lu %12lu %12lu\n", "Swap:",
+           (info.totalswap * m) / unit,
+           ((info.totalswap - info.freeswap) * m) / unit,
+           (info.freeswap * m) / unit);
+
+    // otros detalles de memoria
+    printf("\nDetalles adicionales:\n");
+    printf("Memoria compartida: %12lu KB\n", (info.sharedram * m) / unit);
+    printf("Memoria en buffers: %12lu KB\n", (info.bufferram * m) / unit);
+    printf("Memoria High (Total): %12lu KB\n", (info.totalhigh * m) / unit);
+    printf("Memoria High (Libre): %12lu KB\n", (info.freehigh * m) / unit);
+    
+    // estadísticas de procesos y hardware
+    printf("\n%-20s %u\n", "Procesos actuales:", info.procs);
+    printf("%-20s %u bytes\n", "Tamaño de unidad:", info.mem_unit);
+    printf("\n");
+}
+
+void ip(){
+    struct ifconf ifc; // Estructura para lista de interfaces
+    struct ifreq  ifr_buf[64]; // Buffer para guardar datos de hasta 64 interfaces
+    char sbuf[64]; // Buffer para la IP en texto
+
+    int sock = socket(AF_INET, SOCK_DGRAM, 0); // Socket para consultas de red
+    if(sock == -1){ perror("socket"); return; }
+
+    ifc.ifc_len = sizeof(ifr_buf);
+    ifc.ifc_buf = (char *)ifr_buf;
+
+    if(ioctl(sock, SIOCGIFCONF, &ifc) == -1){ // Obtiene la configuracion de interfaces
+        perror("ioctl SIOCGIFCONF"); 
+        close(sock); return; }
+
+    int n = ifc.ifc_len / sizeof(struct ifreq); // Calcula numero de interfaces encontradas
+    for(int i = 0; i < n; i++){
+        struct ifreq *item = &ifr_buf[i];
+        
+        if(ioctl(sock, SIOCGIFADDR, item) == -1) continue; // Pide la IP de la interfaz
+        struct sockaddr_in *addr = (struct sockaddr_in *)&item->ifr_addr;
+        inet_ntop(AF_INET, &addr->sin_addr, sbuf, sizeof(sbuf)); // Convierte binario a texto
+        printf("%-12s  IP: %s\n", item->ifr_name, sbuf);
+    }
+    close(sock); // Cierra el socket
+}
+
+void mac() {
+    struct ifconf ifc; // Estructura para configurar peticiones de red
+    struct ifreq ifr_buf[64]; // Arreglo para almacenar datos de interfaces
+
+    int sock = socket(AF_INET, SOCK_DGRAM, 0); // Socket necesario para ioctl
+    if (sock == -1) { 
+        perror("socket"); 
+        return; 
+    }
+
+    ifc.ifc_len = sizeof(ifr_buf);
+    ifc.ifc_buf = (char *)ifr_buf;
+
+    if (ioctl(sock, SIOCGIFCONF, &ifc) == -1) { // Obtiene la lista de interfaces
+        perror("ioctl SIOCGIFCONF"); 
+        close(sock); 
+        return; 
+    }
+
+    int n = ifc.ifc_len / sizeof(struct ifreq);
+    
+    for (int i = 0; i < n; i++) {
+        struct ifreq item;
+        
+        memset(&item, 0, sizeof(struct ifreq)); // Limpia la estructura destino
+        memcpy(item.ifr_name, ifr_buf[i].ifr_name, IFNAMSIZ - 1); // Copia nombre de interfaz
+
+        if (ioctl(sock, SIOCGIFHWADDR, &item) == -1) { // Obtiene direccion fisica (MAC)
+            continue;
+        }
+
+        unsigned char *mac = (unsigned char *)item.ifr_hwaddr.sa_data; // Puntero a los bytes de la MAC
+
+        printf("%-12s MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
+               item.ifr_name,
+               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    }
+
+    close(sock); // Libera el socket
+}
+
+void numerosdisp(){
+    DIR *d = opendir("/dev"); // Abre el directorio de dispositivos
+    if(d == NULL){ perror("opendir /dev"); return; }
+
+    struct dirent *e; // Para leer entradas del directorio
+    struct stat   sb; // Para obtener info de cada archivo
+    char        ruta[512]; // Ruta completa al archivo en /dev
+
+    printf("%-30s %-10s %6s %6s\n", "Dispositivo", "Tipo", "Major", "Minor"); //con tipo
+    printf("%-30s %-10s %6s %6s\n", "-----------", "----", "-----", "-----"); 
+    //printf("%-30s  %6s %6s\n", "Dispositivo", "Major", "Minor");//sin tipo
+    //printf("%-30s  %6s %6s\n", "-----------", "-----", "-----");
+
+    while( (e = readdir(d)) != NULL ){
+        if(e->d_name[0] == '.') continue; // Ignora archivos ocultos
+        snprintf(ruta, sizeof(ruta), "/dev/%s", e->d_name); // Construye la ruta /dev/nombre
+        if(lstat(ruta, &sb) == -1) continue;
+
+        // Solo procesa si es dispositivo de bloque o caracteres
+        if(!S_ISBLK(sb.st_mode) && !S_ISCHR(sb.st_mode)) continue;
+
+        char *tipo = S_ISBLK(sb.st_mode) ? "bloque" : "caracter";
+        printf("%-30s %-10s %6u %6u\n",
+        //printf("%-30s %6u %6u\n",//para sin tipo
+            e->d_name,
+            tipo,//pues el tipo
+            major(sb.st_rdev), // Extrae el Major ID
+            minor(sb.st_rdev)); // Extrae el Minor ID
+    }
+    closedir(d); // Cierra el directorio
+}
+```
+
+- - las mejoras a este codigo son muchas y siendo sincero las que pondre aqui no seran todas ya que todavia no tengo la habilidad suficiente para identificar como podria mejorar todo el codigo, pero aqui hay algunas que puedo poner.
+
+- - Primera mejora: terminar el minishell, ya que hay algunas funcionalidades que no estan terminadas.
+
+- - Uso de `perror()` sobre `printf()`: En funciones como cat y find, uso `printf()` para imprimir "Error" o "error". Es mejor usar `perror("cat")`, ya que esto traduce automáticamente el código de error global en (errno).
+
+- - Validación de entrada en comandos con argumentos: Usualmente uso `strchr(opcion, ' ') + 1` en. Si el usuario escribe solo el comando (ej. "cd" sin espacio), strchr devolverá NULL y el programa sufrirá un Segmentation Fault. Se debe validar si el puntero es nulo antes que nada.
+
+- - Control de desbordamiento de búfer: En rname y find, uso strncpy y strcpy con tamaños fijos como 512. Si una ruta es muy larga, podrías causar un desbordamiento. En este caso podria validar longitudes antes de copiar o buscar algo para tener la longitud maxima de una dirección.
+
+- - Mejorar la logica de mis funciones.
+
+- - No se hasta que punto esto se pueda pero tal vez cambiar los `if()` de la funcion principal por un `switch()`.
+
+
+> En estos temas aprendí mucho en cuanto a tipos de archivos, estructuras, etc. aunque siento que el conocimiento no fue tan bien digerido por la falta de tiempo y practica pero espero en un futuro seguir practicando y mejorar en cuanto a mi forma de programar.
 
 ---
 
