@@ -1,6 +1,6 @@
 ---
 title: "Mi primer post: Bienvenido al blog"
-date: "2026-05-10"
+date: "2026-05-15"
 excerpt: "Presentación de  su servidor y prueba para el futuro del Blog."
 tags: ["bienvenida personal"]
 author: "Diego Mendoza Mateo"

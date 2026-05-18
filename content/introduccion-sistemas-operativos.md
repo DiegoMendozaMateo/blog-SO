@@ -1,6 +1,6 @@
 ---
 title: "Introducción a los Sistemas Operativos"
-date: "2026-05-16"
+date: "2026-05-15"
 excerpt: "Resumen y reflexiones personales sobre los temas del curso de Sistemas Operativos: procesos, hilos, IPC, memoria y más."
 tags: ["sistemas-operativos", "linux"]
 author: "Diego Mendoza Mateo"
@@ -8,7 +8,7 @@ author: "Diego Mendoza Mateo"
 
 ## Prólogo
 
-Este blog forma parte de un mini proyecto para el curso de Sistemas Operativos. El objetivo es registrar lo que aprendí en cada tema, explicarlo con mis propias palabras y reflexionar sobre su importancia. 
+Este blog forma parte de un miniproyecto para el curso de Sistemas Operativos. El objetivo es registrar lo que aprendí en cada tema, explicarlo con mis propias palabras y reflexionar sobre su importancia. 
 
 ---
 

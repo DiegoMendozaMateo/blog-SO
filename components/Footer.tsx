@@ -25,7 +25,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="transition-colors hover:text-[var(--color-accent)]"
           >
-            --
+            GitHub
           </a>
         </div>
       </div>

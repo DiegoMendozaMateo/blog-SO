@@ -29,9 +29,6 @@ export default function Navbar() {
           <NavLink href="/" active={pathname === "/"}>
             Inicio
           </NavLink>
-          <NavLink href="/blog" active={pathname.startsWith("/blog")}>
-            Artículos
-          </NavLink>
         </div>
       </nav>
     </header>
