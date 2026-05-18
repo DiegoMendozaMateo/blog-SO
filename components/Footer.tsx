@@ -12,7 +12,7 @@ export default function Footer() {
           style={{ color: "var(--color-ink-muted)" }}
         >
           © {year} Mi Blog · Hecho con{" "}
-          <span style={{ color: "var(--color-accent)" }}>♥</span> y Next.js
+          <span style={{ color: "var(--color-accent)" }}>sudor, sangre, lagrimas</span> y Next.js
         </p>
 
         <div
@@ -20,26 +20,12 @@ export default function Footer() {
           style={{ color: "var(--color-ink-muted)" }}
         >
           <a
-            href="https://github.com"
+            href="https://github.com/DiegoMendozaMateo?tab=repositories"
             target="_blank"
             rel="noopener noreferrer"
             className="transition-colors hover:text-[var(--color-accent)]"
           >
             --
-          </a>
-          <a
-            href="https://twitter.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition-colors hover:text-[var(--color-accent)]"
-          >
-            ---
-          </a>
-          <a
-            href="mailto:hola@mi-blog.com"
-            className="transition-colors hover:text-[var(--color-accent)]"
-          >
-          --
           </a>
         </div>
       </div>
