@@ -8,13 +8,13 @@ import type { Post, PostMeta, TocItem } from "@/types/post";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
 
-/** Calcula el tiempo de lectura estimado en minutos */
+/** Calcula el tiempo de lectura estimado en minutos 
 function calcReadingTime(text: string): number {
   const wordsPerMinute = 200;
   const wordCount = text.trim().split(/\s+/).length;
   return Math.max(1, Math.round(wordCount / wordsPerMinute));
 }
-
+*/
 /** Convierte un texto de heading en un id válido para usar como ancla */
 function slugifyHeading(text: string): string {
   return text
@@ -89,7 +89,7 @@ export function getAllPostsMeta(): PostMeta[] {
       coverImage: data.coverImage ?? undefined,
       tags: data.tags ?? [],
       author: data.author ?? "Anónimo",
-      readingTime: calcReadingTime(content),
+      /**readingTime: calcReadingTime(content),*/
     };
   });
 
@@ -125,7 +125,7 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
     coverImage: data.coverImage ?? undefined,
     tags: data.tags ?? [],
     author: data.author ?? "Anónimo",
-    readingTime: calcReadingTime(content),
+    /**readingTime: calcReadingTime(content),*/
     content: contentHtml,
     toc,
   };

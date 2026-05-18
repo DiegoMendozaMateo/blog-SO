@@ -9,7 +9,7 @@ interface Props {
 export default function PostCard({ post, index = 0 }: Props) {
   const formattedDate = new Intl.DateTimeFormat("es-MX", {
     year: "numeric",
-    month: "short",
+    month: "long",
     day: "numeric",
   }).format(new Date(post.date));
 
